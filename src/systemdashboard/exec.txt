@@ -1,0 +1,60 @@
+🧭 Step 1: Change Directory
+
+cd src/systemdashboard
+
+This moves you into the directory where your native code (like systeminfo.c) and Makefile are stored.
+Assume your C source file and Makefile are located here.
+
+🧹 Step 2: Clean Previous Builds
+
+make clean
+
+This runs the clean target in your Makefile, which typically removes:
+libsysteminfo.so (the old shared library)
+Any .o object files (if present)
+Example clean target in your Makefile:
+
+makefile
+    rm -f libsysteminfo.so *.o
+
+🛠️ Step 3: Compile Native Library
+
+make
+
+This compiles systeminfo.c into a shared library (libsysteminfo.so) using JNI headers.
+Your Makefile probably contains something like:
+
+makefile
+libsysteminfo.so: systeminfo.c
+    gcc -I/usr/lib/jvm/jdk-21.0.6-oracle-x64/include \
+        -I/usr/lib/jvm/jdk-21.0.6-oracle-x64/include/linux \
+        -fPIC -Wall -shared -o libsysteminfo.so systeminfo.c
+
+Explanation:
+-I.../include: Points to JNI header files in your Oracle JDK.
+-fPIC: Generates position-independent code for shared libraries.
+-Wall: Enables all warnings.
+-shared: Creates a shared object (.so file).
+Output is: libsysteminfo.so
+
+🔙 Step 4: Go Back One Level
+
+cd ..
+
+Moves you back from src/systemdashboard to src.
+
+🧾 Step 5: Compile Java Program
+
+javac systemdashboard/SystemMonitor.java
+
+Compiles the Java class SystemMonitor.java.
+This class likely:
+Uses AWT for the GUI
+Calls native methods from SystemInfo.java
+
+▶️ Step 6: Run Java Program with JNI Library
+
+java -Djava.library.path=systemdashboard systemdashboard.SystemMonitor
+
+Runs the Java class SystemMonitor.
+-Djava.library.path=systemdashboard: Tells the JVM where to find libsysteminfo.so.
