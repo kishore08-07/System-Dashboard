@@ -2,24 +2,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+//System & Filesystem Info
 #include <sys/sysinfo.h>
 #include <sys/statvfs.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 #include <dirent.h>
+
+//Network Information
 #include <ifaddrs.h>
 #include <netdb.h>
 #include <net/if.h>
-#include <sys/ioctl.h>
+#include <sys/ioctl.h> //e.g., IP, MAC.
 #include <linux/wireless.h>
-#include <arpa/inet.h>
+#include <arpa/inet.h> //Functions for converting IP addresses between binary and text
+
+//User Info
 #include <sys/types.h>
 #include <pwd.h>
 #include "systemdashboard_SystemMonitor.h"
 
 #define MAX_CPU_CORES 32
-#define MAX_PROCESSES 3
-#define PROC_PATH "/proc"
+#define MAX_PROCESSES 3  // top 3 memory- or CPU-consuming processes
+#define PROC_PATH "/proc"  /// stat (CPU usage) [pid]/status (per-process info) net/dev (network stats)
 #define BATTERY_PATH "/sys/class/power_supply/BAT0"
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 
@@ -119,7 +125,7 @@ JNIEXPORT jdoubleArray JNICALL Java_systemdashboard_SystemMonitor_getPerCpuUsage
     (*env)->SetDoubleArrayRegion(env, result, 0, num_cores, cpu_usage);
     return result;
 }
-
+//total amount of swap memory from sysinfo()
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getSwapTotal
   (JNIEnv *env, jobject obj) {
     struct sysinfo si;
@@ -128,7 +134,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getSwapTotal
     }
     return 0;
 }
-
+//currently free swap memory available from sysinfo()
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getSwapFree
   (JNIEnv *env, jobject obj) {
     struct sysinfo si;
@@ -138,6 +144,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getSwapFree
     return 0;
 }
 
+// total number of bytes received by all network interfaces from /proc/net/dev
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getNetworkBytesReceived
   (JNIEnv *env, jobject obj) {
     FILE *fp = fopen("/proc/net/dev", "r");
@@ -162,6 +169,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getNetworkBytesReceiv
     return (jlong)total_bytes;
 }
 
+// total number of bytes sent/transmitted by all network interfaces from /proc/net/dev
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getNetworkBytesTransmitted
   (JNIEnv *env, jobject obj) {
     FILE *fp = fopen("/proc/net/dev", "r");
@@ -186,6 +194,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getNetworkBytesTransm
     return (jlong)total_bytes;
 }
 
+//number of currently running processes from /proc
 JNIEXPORT jint JNICALL Java_systemdashboard_SystemMonitor_getProcessCount
   (JNIEnv *env, jobject obj) {
     DIR *dir = opendir("/proc");
@@ -207,6 +216,7 @@ JNIEXPORT jint JNICALL Java_systemdashboard_SystemMonitor_getProcessCount
     return count;
 }
 
+//system uptime in seconds since the last boot from sysinfo() to access si.uptime.
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getSystemUptime
   (JNIEnv *env, jobject obj) {
     struct sysinfo si;
@@ -216,6 +226,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getSystemUptime
     return 0;
 }
 
+//total CPU usage percentage across all cores.
 JNIEXPORT jdouble JNICALL Java_systemdashboard_SystemMonitor_getCpuUsage
   (JNIEnv *env, jobject obj) {
     static long long prev_idle_time = 0;
@@ -232,7 +243,8 @@ JNIEXPORT jdouble JNICALL Java_systemdashboard_SystemMonitor_getCpuUsage
     
     long long idle_diff = idle_time - prev_idle_time;
     long long total_diff = total_time - prev_total_time;
-    
+
+    //Calculates the difference between current and previous idle/total times.
     double cpu_usage = 100.0 * (1.0 - ((double)idle_diff / total_diff));
     
     prev_idle_time = idle_time;
@@ -241,6 +253,7 @@ JNIEXPORT jdouble JNICALL Java_systemdashboard_SystemMonitor_getCpuUsage
     return cpu_usage;
 }
 
+//total physical RAM in bytes from sysinfo() struct’s totalram field.
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getTotalMemory
   (JNIEnv *env, jobject obj) {
     struct sysinfo si;
@@ -250,6 +263,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getTotalMemory
     return 0;
 }
 
+//free physical RAM available (not used) in bytes from sysinfo() struct’s freeram field.
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getFreeMemory
   (JNIEnv *env, jobject obj) {
     struct sysinfo si;
@@ -259,6 +273,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getFreeMemory
     return 0;
 }
 
+//total disk space in bytes on the root (/) filesystem from statvfs() on / to read file system stats.
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getTotalDiskSpace
   (JNIEnv *env, jobject obj) {
     struct statvfs buf;
@@ -268,6 +283,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getTotalDiskSpace
     return 0;
 }
 
+// free disk space in bytes on the root (/) filesystem from statvfs() and calculates:
 JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getFreeDiskSpace
   (JNIEnv *env, jobject obj) {
     struct statvfs buf;
@@ -277,6 +293,7 @@ JNIEXPORT jlong JNICALL Java_systemdashboard_SystemMonitor_getFreeDiskSpace
     return 0;
 }
 
+//Uses uname() system call to fill a utsname struct .sysname
 JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getOsName
   (JNIEnv *env, jobject obj) {
     struct utsname system_info;
@@ -286,6 +303,7 @@ JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getOsName
     return create_jstring(env, "Unknown");
 }
 
+//Uses uname() again returns .release field
 JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getOsVersion
   (JNIEnv *env, jobject obj) {
     struct utsname system_info;
@@ -295,6 +313,7 @@ JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getOsVersion
     return create_jstring(env, "Unknown");
 }
 
+//Uses uname() again returns .machine field
 JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getOsArch
   (JNIEnv *env, jobject obj) {
     struct utsname system_info;
@@ -313,6 +332,11 @@ JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getHostname
     return create_jstring(env, "Unknown");
 }
 
+//Uses getifaddrs() to get the linked list of network interfaces.
+//Iterates through interfaces looking for:
+//IPv4 addresses (AF_INET)
+//Calls getnameinfo() with NI_NUMERICHOST to get the IP address string.
+//Returns the first matching IP as a Java string.
 JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getIpAddress
   (JNIEnv *env, jobject obj) {
     struct ifaddrs *ifaddr, *ifa;
@@ -336,11 +360,17 @@ JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getIpAddress
             }
         }
     }
-    
+
+    // free the interface list with freeifaddrs() to avoid memory leaks.
     freeifaddrs(ifaddr);
     return create_jstring(env, "Not available");
 }
 
+//uses getifaddrs() to list network interfaces.
+//  Skips loopback interfaces.
+//  For each interface, opens a socket and uses ioctl() with SIOCGIFHWADDR to get the MAC address.
+//  Formats the MAC address as a hex string ("xx:xx:xx:xx:xx:xx").
+//  Returns the first valid MAC address found as a Java string.
 JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getMacAddress
   (JNIEnv *env, jobject obj) {
     struct ifaddrs *ifaddr, *ifa;
@@ -371,7 +401,8 @@ JNIEXPORT jstring JNICALL Java_systemdashboard_SystemMonitor_getMacAddress
             }
         }
     }
-    
+
+// free the interface list with freeifaddrs() to avoid memory leaks.
     freeifaddrs(ifaddr);
     return create_jstring(env, "Not available");
 }
@@ -429,7 +460,7 @@ JNIEXPORT jobjectArray JNICALL Java_systemdashboard_SystemMonitor_getTopProcesse
     struct dirent *entry;
     ProcessInfo processes[128];
     int process_count = 0;
-    
+
     dir = opendir("/proc");
     if (!dir) {
         return NULL;
