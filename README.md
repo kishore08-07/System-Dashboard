@@ -122,10 +122,3 @@ SystemDashboard/
 - Battery information is only available on systems with battery
 - Process CPU usage is calculated based on process time
 
-## License
-
-[Your License Here]
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit pull requests. 
